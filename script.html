@@ -13,6 +13,7 @@ run.getWords()
 
 function SpeakAndSpell() {
   const app = this
+  app.running = false
   app.words = []
   app.synth = window.speechSynthesis
   app.rates = {
@@ -21,7 +22,6 @@ function SpeakAndSpell() {
   app.checkSpelling = () => {
     const currentInput = input.value,
           target = app.words[app.wordIndex]
-      console.log({currentInput, target})
     if (currentInput.length < target.length) {
       return
     }
@@ -46,6 +46,9 @@ function SpeakAndSpell() {
     } else {
       utter.rate = app.rates.NORMAL
     }
+    if (options && options.start) {
+      utter.addEventListener("start", options.start)
+    }
     if (options && options.end) {
       utter.addEventListener("end", options.end)
     }
@@ -53,7 +56,11 @@ function SpeakAndSpell() {
   }
   app.spell = string => {
     app.speak("spell")
-    app.speak(string, { rate: app.rates.SLOW })
+    app.speak(string, {
+      rate: app.rates.SLOW,
+      start: () => {display.textContent = "Listen to the word"},
+      end: () => {display.textContent = "Click to hear the word again"}
+    })
   }
   app.nextWord = () => {
     ++app.wordIndex
@@ -86,13 +93,16 @@ function SpeakAndSpell() {
    */
   app.start = response => {
     app.words = response.words
+    if (! app.words || app.words.length == 0) {
+      app.handleError(new Error("Oops, no words found! Try refreshing."))
+      return
+    }
     dataSheetLink.setAttribute("href", response.url)
     app.wordIndex = 0
     app.shuffle(app.words)
   }
   /** helper function to abstract the details of rendering each card */
   app.update = word => {
-    display.textContent = word
     input.value = ""
     input.focus()
     app.spell(word)
@@ -102,7 +112,12 @@ function SpeakAndSpell() {
     if (click.target.tagName != "P") {
       return
     }
-    app.nextWord()
+    if (! app.running) {
+      app.running = true
+      app.nextWord()
+    } else {
+      app.speak(app.words[app.wordIndex])
+    }
   }
 
   // simple display of error to the user
@@ -119,6 +134,9 @@ function SpeakAndSpell() {
 
   app.handleKeyup = keyup => {
     if (keyup.target.tagName != "INPUT") {
+      if (/^\w$/.test(keyup.key)) {
+        input.value += keyup.key
+      }
       input.focus()
     }
     if (/^\w$/.test(keyup.key)) {
