@@ -25,20 +25,23 @@ function SpeakAndSpell() {
     if (currentInput.length < target.length) {
       return
     }
+    app.inputDisable()
     if (currentInput.length > target.length) {
-      app.speak("too many letters")
+      app.speak("too many letters", {end: app.inputEnable})
       return
     }
     if (currentInput.toLowerCase() !== target.toLowerCase()) {
       app.speak("you entered:")
-      app.speak(currentInput, { rate: app.rates.SLOW })
-      app.speak("which is not quite right. try again.")
+      app.speak(currentInput, {rate: app.rates.SLOW})
+      app.speak("which is not quite right. try again.", {end: app.inputEnable})
       return
     }
     app.speak("you entered:")
-    app.speak(currentInput, { rate: app.rates.SLOW })
-    app.speak("that is correct", { end: app.nextWord })
+    app.speak(currentInput, {rate: app.rates.SLOW})
+    app.speak("that is correct", {end: app.nextWord})
   }
+  app.inputDisable = () => input.setAttribute("disabled", true)
+  app.inputEnable = () => input.removeAttribute("disabled")
   app.speak = (string, options) => {
     const utter = new SpeechSynthesisUtterance(string)
     if (options && options.rate) {
@@ -55,11 +58,15 @@ function SpeakAndSpell() {
     app.synth.speak(utter)
   }
   app.spell = string => {
-    app.speak("spell")
+    app.speak("spell", {
+      start: () => {display.textContent = "Listen to the word"}
+    })
     app.speak(string, {
       rate: app.rates.SLOW,
-      start: () => {display.textContent = "Listen to the word"},
-      end: () => {display.textContent = "Click to hear the word again"}
+      end: () => {
+        display.textContent = "Click to hear the word again"
+        app.inputEnable()
+      }
     })
   }
   app.nextWord = () => {
