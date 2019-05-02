@@ -1,9 +1,11 @@
 <script>
 /* global google */
-const display = document.querySelector("p"),
+const controls = document.querySelector("nav"),
+      display = document.querySelector("p"),
       dataSheetLink = document.querySelector("#dataSheetLink"),
-      input = document.querySelector("input"),
+      input = document.querySelector("#input_main"),
       app = new SpeakAndSpell()
+
 const run = google.script.run
         .withFailureHandler(app.handleError)
           .withSuccessHandler(app.start)
@@ -19,6 +21,8 @@ function SpeakAndSpell() {
   app.rates = {
     SLOW: 0.65, NORMAL: 1
   }
+  document.querySelector("#slider_rateNormal").value = app.rates.NORMAL
+  document.querySelector("#slider_rateSlow").value = app.rates.SLOW
   app.checkSpelling = () => {
     const currentInput = input.value,
           target = app.words[app.wordIndex]
@@ -116,14 +120,28 @@ function SpeakAndSpell() {
   }
   /** handles clicking on the word */
   app.handleClick = click => {
-    if (click.target.tagName != "P") {
+    if (click.target.tagName == "P") {
+      app.handleClickWord()
       return
     }
+    if (click.target.id == "button_showControls") {
+      if (controls.classList.contains("hidden")) {
+        controls.classList.remove("hidden")
+        click.target.text = "Hide controls"
+      } else {
+        controls.classList.add("hidden")
+        click.target.text = "Show controls"
+      }
+      return
+    }
+  }
+
+  app.handleClickWord = () => {
     if (! app.running) {
       app.running = true
       app.nextWord()
     } else {
-      app.speak(app.words[app.wordIndex])
+      app.speak(app.words[app.wordIndex], {rate: app.rates.SLOW})
     }
   }
 
@@ -140,7 +158,7 @@ function SpeakAndSpell() {
   }
 
   app.handleKeyup = keyup => {
-    if (keyup.target.tagName != "INPUT") {
+    if (keyup.target.id != "input_main") {
       if (/^\w$/.test(keyup.key)) {
         input.value += keyup.key
       }
@@ -151,10 +169,22 @@ function SpeakAndSpell() {
       app.checkSpelling()
     }
   }
+
+  app.handleSlider = change => {
+    if (change.target.type != "range") {
+      return
+    }
+    if (/normal/i.test(change.target.id)) {
+      app.rates.NORMAL = change.target.value
+    } else {
+      app.rates.SLOW = change.target.value
+    }
+  }
   
   // register event handlers
   window.addEventListener("click", app.handleClick)
   window.addEventListener("keyup", app.handleKeyup)
+  window.addEventListener("change", app.handleSlider)
   google.script.history.setChangeHandler(app.handleHistory)
 }
 
